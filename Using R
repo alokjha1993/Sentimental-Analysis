@@ -1,0 +1,154 @@
+---
+author: "Alok Jha"
+date: "25 September 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r warning=FALSE}
+library(tm)
+library(wordcloud)
+library(dplyr)
+library(RColorBrewer)
+library(RWeka)
+```
+
+###### Reading and loading the data
+
+```{r warning=FALSE}
+review = read.csv("E:/Unstructured Data/hotstar.allreviews_Sentiments.csv")
+```
+
+###### Filtering out positive, negative and neutral reviews
+
+```{r warning=FALSE}
+positive = review %>% filter(Sentiment_Manual == "Positive") %>% select(c(Reviews, Sentiment_Manual))
+
+negative = review %>% filter(Sentiment_Manual == "Negative") %>% select(c(Reviews, Sentiment_Manual))
+
+neutral = review %>% filter(Sentiment_Manual == "Neutral") %>% select(c(Reviews, Sentiment_Manual))
+```
+
+###### Creating positive, negative and neutral vcorpus
+
+```{r warning=FALSE}
+pos_docs = VCorpus(VectorSource(positive$Reviews))
+neg_docs = VCorpus(VectorSource(negative$Reviews))
+neut_docs = VCorpus(VectorSource(neutral$Reviews))
+```
+
+###### Transforming all docs to lower 
+
+```{r warning=FALSE}
+pos_docs = tm_map(pos_docs, content_transformer(tolower))
+neg_docs = tm_map(neg_docs, content_transformer(tolower))
+neut_docs = tm_map(neut_docs, content_transformer(tolower))
+```
+
+
+
+```{r warning=FALSE}
+apply_regex = function(s) gsub('[^a-zA-Z ]', '', s)
+common_stop_words = stopwords()
+custom_stop_words = c('amp')
+all_stop_words = c(common_stop_words, custom_stop_words)
+```
+
+###### Removing regular expressions from positive reviews
+
+```{r warning=FALSE}
+pos_docs = tm_map(pos_docs, content_transformer(apply_regex))
+
+pos_docs = tm_map(pos_docs, removeWords, all_stop_words)
+pos_docs = tm_map(pos_docs, stemDocument)
+```
+
+###### Removing regular expressions from negative reviews
+
+```{r warning=FALSE}
+neg_docs = tm_map(neg_docs, content_transformer(apply_regex))
+
+neg_docs = tm_map(neg_docs, removeWords, all_stop_words)
+neg_docs = tm_map(neg_docs, stemDocument)
+```
+
+###### Removing regular expressions from neutral reviews
+
+```{r warning=FALSE}
+neut_docs = tm_map(neut_docs, content_transformer(apply_regex))
+
+neut_docs = tm_map(neut_docs, removeWords, all_stop_words)
+neut_docs = tm_map(neut_docs, stemDocument)
+```
+
+###### Inspecting docs
+
+```{r warning=FALSE}
+stopwords()
+inspect(pos_docs[[1]])
+inspect(neg_docs[[1]])
+inspect(neut_docs[[1]])
+```
+
+###### DTM for positive reviews
+
+```{r warning=FALSE}
+pos_dtm = DocumentTermMatrix(pos_docs)
+pos_df_dtm = as.data.frame(as.matrix(pos_dtm))
+dim(pos_df_dtm)
+
+words_freq = colSums(pos_df_dtm)
+words_freq = data.frame(words = labels(words_freq), freq = words_freq)
+pos_top50_words = words_freq %>% arrange(-freq) %>% head(50)
+```
+
+###### Wordcloud for positive reviews
+
+```{r warning=FALSE}
+wordcloud(pos_top50_words$words, pos_top50_words$freq, color = brewer.pal(8, 'Dark2'),
+          random.color = T)
+```
+
+###### DTM for negative reviews
+
+```{r warning=FALSE}
+neg_dtm = DocumentTermMatrix(neg_docs)
+neg_df_dtm = as.data.frame(as.matrix(neg_dtm))
+dim(neg_df_dtm)
+
+words_freq = colSums(neg_df_dtm)
+words_freq = data.frame(words = labels(words_freq), freq = words_freq)
+neg_top50_words = words_freq %>% arrange(-freq) %>% head(50)
+```
+
+###### Wordcloud for negative reviews
+
+```{r warning=FALSE}
+wordcloud(neg_top50_words$words, neg_top50_words$freq, color = brewer.pal(8, 'Dark2'),
+          random.color = T)
+```
+
+###### DTM for neutral reviews
+
+```{r warning=FALSE}
+neut_dtm = DocumentTermMatrix(neut_docs)
+neut_df_dtm = as.data.frame(as.matrix(neut_dtm))
+dim(neut_df_dtm)
+
+words_freq = colSums(neut_df_dtm)
+words_freq = data.frame(words = labels(words_freq), freq = words_freq)
+neut_top50_words = words_freq %>% arrange(-freq) %>% head(50)
+```
+
+###### Wordcloud for neutral reviews
+
+```{r warning=FALSE}
+wordcloud(neut_top50_words$words, neut_top50_words$freq, color = brewer.pal(8, 'Dark2'),
+          random.color = T)
+```
+
+
